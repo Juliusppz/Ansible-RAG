@@ -1,0 +1,10 @@
+- name: Prepare server for RAG project deployment
+  hosts: all
+  become: yes
+
+  vars:
+    rag_project_dir: /opt/rag-service
+    rag_repo_url: "https://github.com/Juliusppz/RAG_service.git"
+
+  roles:
+    - rag_server
