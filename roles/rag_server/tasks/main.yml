@@ -56,3 +56,10 @@
     dest: "{{ rag_project_dir }}"
     version: "main"
   when: rag_repo_url is defined
+
+- name: Create RAG service configuration
+  template:
+    src: config.j2
+    dest: "{{ rag_project_dir }}/config.env"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
