@@ -57,9 +57,25 @@
     version: "main"
   when: rag_repo_url is defined
 
-- name: Create RAG service configuration
-  template:
-    src: config.j2
-    dest: "{{ rag_project_dir }}/config.env"
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_user }}"
+- name: Store API key in a temporary file
+  copy:
+    content: "{{ api_key }}"
+    dest: "/tmp/api_key.txt"
+    mode: "0600"
+  delegate_to: localhost
+  run_once: true
+
+- name: Update GCP instance metadata with API key
+  delegate_to: localhost
+  command: >
+    gcloud compute instances add-metadata {{ gcp_instance_name }}
+    --zone {{ gcp_instance_zone }}
+    --metadata-from-file=API_KEY=/tmp/api_key.txt
+  run_once: true
+
+- name: Remove temporary API key file
+  file:
+    path: "/tmp/api_key.txt"
+    state: absent
+  delegate_to: localhost
+  run_once: true

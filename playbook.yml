@@ -5,6 +5,9 @@
   vars:
     rag_project_dir: /opt/rag-service
     rag_repo_url: "https://github.com/Juliusppz/RAG_service.git"
+    gcp_instance_name: "{{ inventory_hostname }}"
+    gcp_instance_zone: "your-instance-zone"
+    api_key: "{{ api_key }}"
 
   roles:
     - rag_server
