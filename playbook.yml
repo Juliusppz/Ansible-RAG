@@ -5,9 +5,25 @@
   vars:
     rag_project_dir: /opt/rag-service
     rag_repo_url: "https://github.com/Juliusppz/RAG_service.git"
-    gcp_instance_name: "{{ inventory_hostname }}"
-    gcp_instance_zone: "your-instance-zone"
     api_key: "{{ api_key }}"
+
+  tasks:
+    - name: Fetch GCP instance metadata
+      google.cloud.gcp_compute_instance_info:
+        filters:
+          - name="{{ inventory_hostname }}"
+      register: instance_metadata
+
+    - name: Extract instance zone
+      set_fact:
+        gcp_instance_zone: "{{ instance_metadata.resources[0].zone }}"
+
+    - name: Update GCP instance metadata with API key
+      command: >
+        gcloud compute instances add-metadata {{ inventory_hostname }}
+        --zone {{ gcp_instance_zone }}
+        --metadata API_KEY={{ api_key }}
+      delegate_to: localhost
 
   roles:
     - rag_server

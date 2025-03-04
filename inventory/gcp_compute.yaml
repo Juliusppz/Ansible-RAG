@@ -1,0 +1,7 @@
+plugin: gcp_compute
+projects:
+  - "{{ lookup('env', 'GCP_PROJECT') }}"
+auth_kind: serviceaccount
+service_account_contents: "{{ lookup('env', 'GCP_CREDENTIALS') }}"
+filters:
+  - labels.environment=production
