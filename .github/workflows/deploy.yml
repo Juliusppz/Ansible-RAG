@@ -35,6 +35,5 @@ jobs:
           API_KEY: ${{ secrets.API_KEY }}
           GCP_PROJECT: ${{ secrets.GCP_PROJECT }}
           GCP_CREDENTIALS: ${{ secrets.GCP_CREDENTIALS }}
-          GOOGLE_APPLICATION_CREDENTIALS: ${{ env.GOOGLE_APPLICATION_CREDENTIALS }}
         run: |
           ansible-playbook playbook.yml -i inventory/gcp_compute.yaml
