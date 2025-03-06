@@ -8,15 +8,92 @@
     api_key: "{{ api_key }}"
 
   tasks:
-    - name: Fetch GCP instance metadata
-      google.cloud.gcp_compute_instance_info:
-        filters:
-          - name="{{ inventory_hostname }}"
-      register: instance_metadata
+    - name: Update apt cache
+      apt:
+        update_cache: yes
 
-    - name: Extract instance zone
-      set_fact:
-        gcp_instance_zone: "{{ instance_metadata.resources[0].zone }}"
+    - name: Install required packages
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+          - docker.io
+          - docker-compose-plugin
+        state: present
+        update_cache: yes
+
+    - name: Add Docker's official GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker repository
+      apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+        state: present
+
+    - name: Update apt cache after adding Docker repo
+      apt:
+        update_cache: yes
+
+    - name: Install Docker CE and related packages
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+        state: present
+
+    - name: Ensure Docker service is running and enabled
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Clone or update RAG project repository
+      git:
+        repo: "{{ rag_repo_url }}"
+        dest: "{{ rag_project_dir }}"
+        version: "main"
+        update: yes
+
+    - name: Set correct ownership for project directory
+      file:
+        path: "{{ rag_project_dir }}"
+        state: directory
+        owner: "{{ lookup('env', 'USER') }}"
+        group: "{{ lookup('env', 'USER') }}"
+        recurse: yes
+
+    - name: Copy docker-compose files
+      copy:
+        src: "{{ item }}"
+        dest: "{{ rag_project_dir }}/{{ item | basename }}"
+      with_items:
+        - docker-compose.yml
+        - docker-compose.prod.yml
+
+    - name: Pull the latest images defined in docker-compose.prod.yml
+      command: docker-compose -f docker-compose.yml -f docker-compose.prod.yml pull
+      args:
+        chdir: "{{ rag_project_dir }}"
+
+    - name: Stop and remove existing containers
+      command: docker-compose -f docker-compose.yml -f docker-compose.prod.yml down
+      args:
+        chdir: "{{ rag_project_dir }}"
+      ignore_errors: yes
+
+    - name: Start containers with production configuration
+      command: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+      args:
+        chdir: "{{ rag_project_dir }}"
+
+    - name: Ensure Docker services are running
+      command: docker ps
 
     - name: Update GCP instance metadata with API key
       command: >
@@ -24,6 +101,3 @@
         --zone {{ gcp_instance_zone }}
         --metadata API_KEY={{ api_key }}
       delegate_to: localhost
-
-  roles:
-    - rag_server
